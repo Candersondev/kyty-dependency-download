@@ -1,0 +1,52 @@
+
+name: Download KytyPS5 FetchContent dependencies
+
+on:
+  workflow_dispatch:
+
+jobs:
+  download:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Fetch pinned dependency revisions
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dependencies
+          cd dependencies
+
+          # Opus
+          git clone https://github.com/xiph/opus.git opus-src
+          git -C opus-src checkout ddbe48383984d56acd9e1ab6a090c54ca6b735a6
+
+          # Xbyak
+          git clone https://github.com/herumi/xbyak.git xbyak-src
+          git -C xbyak-src checkout 44a72f369268f7d552650891b296693e91db86bb
+
+          # Zydis
+          git clone https://github.com/zyantific/zydis.git zydis-src
+          git -C zydis-src checkout 120e0e705f8e3b507dc49377ac2879979f0d545c
+          git -C zydis-src submodule update --init --recursive
+
+          # Zstandard
+          git clone https://github.com/facebook/zstd.git zstd-src
+          git -C zstd-src checkout f8745da6ff1ad1e7bab384bd1f9d742439278e99
+
+          # ZArchive
+          git clone https://github.com/Exzap/ZArchive.git zarchive_source-src
+          git -C zarchive_source-src checkout d2c717730092c7bf8cbb033b12fd4001b7c4d932
+
+          # Remove Git metadata to reduce archive size
+          find . -type d -name .git -prune -exec rm -rf '{}' +
+
+      - name: Package dependencies
+        run: |
+          tar -czf kyty-fetchcontent-dependencies.tar.gz -C dependencies .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kyty-fetchcontent-dependencies
+          path: kyty-fetchcontent-dependencies.tar.gz
+          retention-days: 7
