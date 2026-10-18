@@ -1,0 +1,62 @@
+
+name: Download KytyPS5 FFmpeg
+
+on:
+  workflow_dispatch:
+
+jobs:
+  download:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Clone KytyPS5 with submodules
+        uses: actions/checkout@v4
+        with:
+          repository: KytyPS5/KytyPS5
+          submodules: recursive
+          path: KytyPS5
+
+      - name: Determine FFmpeg revision
+        id: ffmpeg
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          cd KytyPS5/3rdparty/ffmpeg-core
+
+          SHA=$(git rev-parse --short=12 HEAD)
+
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          echo "FFmpeg revision: $SHA"
+
+      - name: Download FFmpeg packages
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mkdir -p ffmpeg-packages
+          cd ffmpeg-packages
+
+          SHA="${{ steps.ffmpeg.outputs.sha }}"
+
+          BASE="https://github.com/KytyPS5/ext-ffmpeg-core/releases/download/$SHA"
+
+          curl -fL --retry 3 \
+            "$BASE/ffmpeg-linux-x64.zip" \
+            -o ffmpeg-linux-x64.zip
+
+          curl -fL --retry 3 \
+            "$BASE/ffmpeg-windows-x64.zip" \
+            -o ffmpeg-windows-x64.zip
+
+          unzip -t ffmpeg-linux-x64.zip
+          unzip -t ffmpeg-windows-x64.zip
+
+          echo "$SHA" > ffmpeg-revision.txt
+
+      - name: Upload FFmpeg dependencies
+        uses: actions/upload-artifact@v4
+        with:
+          name: kyty-ffmpeg-dependencies
+          path: ffmpeg-packages/
+          retention-days: 7
